@@ -1,4 +1,12 @@
 const errorHandler = (err, req, res, next) => {
+
+    console.error({
+    message: err.message,
+    stack: err.stack,
+    statusCode: err.statusCode
+  });
+
+  
   const statusCode = err.statusCode || 500;
 
   res.status(statusCode).json({
