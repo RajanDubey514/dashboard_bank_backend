@@ -107,6 +107,7 @@ if (!passwordRegex.test(password)) {
   );
 });
 
+
 export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -133,6 +134,10 @@ export const loginUser = asyncHandler(async (req, res) => {
   const populatedUser = await User.findById(user._id).populate("role");
 
   const token = populatedUser.generateAccessToken(populatedUser.role.name);
+  const refreshToken = populatedUser.generateRefreshToken();
+
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
 
   // remove password
   const loggedInUser = await User.findById(user._id)
@@ -142,7 +147,12 @@ export const loginUser = asyncHandler(async (req, res) => {
   .populate("accountStatus");
 
   //return resp
-  return res.status(200).json(
+  return res.status(200)
+   .cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: false,
+  })
+  .json(
     new ApiResponse(
       200,
       {
@@ -152,4 +162,30 @@ export const loginUser = asyncHandler(async (req, res) => {
       "User Logged in successfully",
     ),
   );
+});
+
+
+export const logoutUser = asyncHandler(async (req , res) =>{
+ // refreshToken DB se hatao
+  await User.findByIdAndUpdate(
+    req.user._id , 
+    {
+      $unset : { refreshToken : 1},
+    },
+    { new : true }
+  );
+
+  // cookies clear karo 
+  return res.status(200)
+  .clearCookie("refreshToken" , {
+     httpOnly: true,
+      secure: false,
+  })
+  .clearCookie("accessToken", {
+      httpOnly: true,
+      secure: false,
+    })
+    .json(
+      new ApiResponse(200 , {} , "logout successful")
+    );
 });

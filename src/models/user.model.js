@@ -56,13 +56,17 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
+    refreshToken: {
+      type: String,
+    },
   },
   { timestamps: true },
 );
 
 //hash password before save
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password")) return ;
 
   this.password = await bcrypt.hash(this.password, 10);
   // next();
@@ -83,8 +87,21 @@ userSchema.methods.generateAccessToken = function (roleName) {
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: "1d",
+      expiresIn:  process.env.JWT_EXPIERD,
     },
   );
 };
+
+userSchema.methods.generateRefreshToken = function(){
+ return jwt.sign(
+    {
+      _id : this._id,
+    },
+    process.env.REFRESH_SECRET , 
+     { 
+      expiresIn: process.env.REFRESH_EXPIERD 
+    }
+ );
+};
+
 export const User = mongoose.model("User", userSchema);
