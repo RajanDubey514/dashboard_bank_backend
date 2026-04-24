@@ -5,6 +5,8 @@ import { User } from "../models/user.model.js";
 import { Role } from "../models/role.model.js";
 import { Department } from "../models/department.model.js";
 import { AccountStatus } from "../models/accountStatus.model.js";
+import nodemailer from "nodemailer";
+import crypto from "crypto";
 
 export const registerUser = asyncHandler(async (req, res) => {
   const {
@@ -148,6 +150,10 @@ export const loginUser = asyncHandler(async (req, res) => {
 
   //return resp
   return res.status(200)
+  .cookie("accessToken", token, {
+  httpOnly: true,
+  secure: false,
+})
    .cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: false,
@@ -188,4 +194,82 @@ export const logoutUser = asyncHandler(async (req , res) =>{
     .json(
       new ApiResponse(200 , {} , "logout successful")
     );
+});
+
+export const forgotPassword = asyncHandler(async (req , res) =>{
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+
+  if(!user){
+    throw new ApiError(404 , "User not found");
+  }
+
+  const resetToken = user.generateResetToken();
+  await user.save({
+     validateBeforeSave: false 
+  });
+
+  const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+  const transporter = nodemailer.createTransport({
+    service : "gmail",
+    auth:{
+      user : process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  await transporter.sendMail({
+    to:user.email,
+    subject:"Password Reset",
+    text : `Click here to reset password : ${resetUrl}`,
+  });
+
+  return res.status(200).json(
+    new ApiResponse( 200 , {} , "Reset link sent to email")
+  )
+})
+
+export const resetPassword = asyncHandler( async (req , res) =>{
+ const {token} = req.params;
+ const {password ,confirmPassword} = req.body;
+
+ if (password !== confirmPassword) {
+  throw new ApiError(400, "Passwords do not match");
+}
+
+const passwordRegex =
+/^(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+
+if (!passwordRegex.test(password)) {
+  throw new ApiError(
+    400,
+    "Password must be at least 8 characters, include one uppercase letter and one special character"
+  );
+}
+
+ const hashedToken = crypto
+ .createHash("sha256")
+ .update(token)
+ .digest("hex");
+
+ const user = await User.findOne({
+     resetPasswordToken: hashedToken,
+    resetPasswordExpire: { $gt: Date.now() },
+ });
+
+ if(!user){
+  throw new ApiError(400 , "Token invalid or expired");
+ };
+
+ user.password = password;
+ user.resetPasswordToken = undefined;
+ user.resetPasswordExpire = undefined;
+
+ await user.save();
+
+ return res.status(200).json(
+  new ApiResponse(200 , {} , "Password reset successful" )
+ );
+
 });
