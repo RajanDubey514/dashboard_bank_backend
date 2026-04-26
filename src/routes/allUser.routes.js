@@ -1,7 +1,7 @@
 import express from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { authorizedRoles } from "../middlewares/role.middleware.js";
-import { getAllUsers, getMyProfile, toggleUserStatus, updateMyProfile, updateUserAvatar, updateUserCoverImage } from "../controllers/AllUsers.controller.js";
+import { getAllUsers, getMyProfile, toggleUserStatus, updateMyProfile, updateUserAvatar, updateUserCoverImage } from "../controllers/allUsers.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
 const router = express.Router()
