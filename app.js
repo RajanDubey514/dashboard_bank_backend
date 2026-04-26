@@ -16,26 +16,31 @@ const app = express();
 //         origin : process.env.CORS_ORIGIN,
 //         credentials : true
 //     }));
-   
- const allowedOrigins = [
-  "http://localhost:3001", // local
-  "https://hilarious-sable-72cc78.netlify.app" // tera frontend
+const allowedOrigins = [
+  "https://hilarious-sable-72cc78.netlify.app",
 ];
-   app.use(
+
+// localhost dynamic allow (ANY port)
+const isLocalhost = (origin) => {
+  return /^http:\/\/localhost:\d+$/.test(origin);
+};
+
+app.use(
   cors({
     origin: function (origin, callback) {
-      // Postman / mobile apps ke liye
+      // Postman / mobile apps
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
+      if (allowedOrigins.includes(origin) || isLocalhost(origin)) {
+        callback(null, true);
       } else {
-        return callback(new Error("CORS not allowed"));
+        callback(new Error("CORS not allowed: " + origin));
       }
     },
     credentials: true,
   })
 );
+
 
 
     app.use(express.json());
