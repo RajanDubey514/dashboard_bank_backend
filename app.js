@@ -12,7 +12,7 @@ import allUser from './src/routes/allUser.routes.js'
 const app = express();
 
 const allowedOrigins = [
-  "https://hilarious-sable-72cc78.netlify.app",
+  "https://mellifluous-kataifi-1bc8e7.netlify.app/",
 ];
 
 // localhost dynamic allow (ANY port)
