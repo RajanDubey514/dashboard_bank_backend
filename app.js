@@ -11,11 +11,6 @@ import allUser from './src/routes/allUser.routes.js'
 
 const app = express();
 
-// app.use(
-//     cors({
-//         origin : process.env.CORS_ORIGIN,
-//         credentials : true
-//     }));
 const allowedOrigins = [
   "https://hilarious-sable-72cc78.netlify.app",
 ];
