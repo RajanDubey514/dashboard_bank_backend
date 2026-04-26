@@ -58,6 +58,23 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
+    avatar: {
+     type: String,
+     },
+
+      coverImage: {
+        type: String,
+      },
+
+      location: {
+        type: String,
+      },
+
+      bio: {
+        type: String,
+        maxlength: 200,
+      },
+
     refreshToken: {
       type: String,
     },

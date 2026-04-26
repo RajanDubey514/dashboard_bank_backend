@@ -7,6 +7,7 @@ import userRoutes from "./src/routes/user.routes.js";
 import accountStatus  from "./src/routes/accountStatus.routes.js";
 import roleStatus from "./src/routes/role.routes.js"
 import departmentStatus from "./src/routes/department.routes.js"
+import allUser from './src/routes/allUser.routes.js'
 
 const app = express();
 
@@ -23,12 +24,11 @@ app.use(
     app.use(cookieParser());
 
 
-
-
     app.use("/api/v1/users", userRoutes);
     app.use("/api/v1/account_status" , accountStatus);
     app.use("/api/v1/role" , roleStatus);
     app.use("/api/v1/department" , departmentStatus);
+    app.use("/api/v1/all" , allUser)
 
 
     app.use(errorHandler);

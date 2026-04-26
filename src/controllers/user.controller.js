@@ -9,14 +9,8 @@ import nodemailer from "nodemailer";
 import crypto from "crypto";
 
 export const registerUser = asyncHandler(async (req, res) => {
-  const {
-    fullName,
-    email,
-    phone,
-    username,
-    password,
-    confirmPassword,
-  } = req.body;
+  const { fullName, email, phone, username, password, confirmPassword } =
+    req.body;
 
   // validation
   if (
@@ -29,22 +23,21 @@ export const registerUser = asyncHandler(async (req, res) => {
   ) {
     throw new ApiError(400, "All required fields must be filled");
   }
-   
- const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-if (!emailRegex.test(email)) {
-  throw new ApiError(400, "Invalid email format");
-}
- 
-const passwordRegex =
-  /^(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-if (!passwordRegex.test(password)) {
-  throw new ApiError(
-    400,
-    "Password must be at least 8 characters, include one uppercase letter and one special character"
-  );
-} 
+  if (!emailRegex.test(email)) {
+    throw new ApiError(400, "Invalid email format");
+  }
+
+  const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+
+  if (!passwordRegex.test(password)) {
+    throw new ApiError(
+      400,
+      "Password must be at least 8 characters, include one uppercase letter and one special character",
+    );
+  }
 
   // password match
   if (password !== confirmPassword) {
@@ -58,32 +51,30 @@ if (!passwordRegex.test(password)) {
   if (existingUser) {
     throw new ApiError(409, "User already exists");
   }
- 
+
   const userCount = await User.countDocuments();
 
   const roleName = userCount === 0 ? "SUPER_ADMIN" : "USER";
 
-  const roleData = await Role.findOne({ name : roleName});
-  const departmentData = await Department.findOne({ name : "IT"});
-  const statusData = await AccountStatus.findOne({ name : "ACTIVE"});
+  const roleData = await Role.findOne({ name: roleName });
+  const departmentData = await Department.findOne({ name: "IT" });
+  const statusData = await AccountStatus.findOne({ name: "ACTIVE" });
 
-  if( !roleData || !departmentData || !statusData){
-    throw new ApiError(500 , "Seed Data missing");
+  if (!roleData || !departmentData || !statusData) {
+    throw new ApiError(500, "Seed Data missing");
   }
-
 
   // Create user
   const user = await User.create({
     fullName,
     email,
     phone,
-    department : departmentData._id,
-    role : roleData._id,
-    accountStatus : statusData._id,
+    department: departmentData._id,
+    role: roleData._id,
+    accountStatus: statusData._id,
     username,
     password,
   });
-
 
   const populatedUser = await User.findById(user._id).populate("role");
 
@@ -91,10 +82,11 @@ if (!passwordRegex.test(password)) {
   const token = populatedUser.generateAccessToken(populatedUser.role.name);
 
   // ❌ remove password from response
-  const createdUser = await User.findById(user._id).select("-password")
-  .populate("role")
-  .populate("department")
-  .populate("accountStatus");
+  const createdUser = await User.findById(user._id)
+    .select("-password")
+    .populate("role")
+    .populate("department")
+    .populate("accountStatus");
 
   // response
   return res.status(201).json(
@@ -109,7 +101,6 @@ if (!passwordRegex.test(password)) {
   );
 });
 
-
 export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -121,7 +112,7 @@ export const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "password is required");
   }
 
-  const user = await User.findOne({email });
+  const user = await User.findOne({ email });
 
   if (!user) {
     throw new ApiError(400, "User not found");
@@ -132,7 +123,7 @@ export const loginUser = asyncHandler(async (req, res) => {
   if (!isPasswordValid) {
     throw new ApiError(401, "Invalid credentials");
   }
-  
+
   const populatedUser = await User.findById(user._id).populate("role");
 
   const token = populatedUser.generateAccessToken(populatedUser.role.name);
@@ -143,133 +134,127 @@ export const loginUser = asyncHandler(async (req, res) => {
 
   // remove password
   const loggedInUser = await User.findById(user._id)
-  .select("-password")
-  .populate("role")
-  .populate("department")
-  .populate("accountStatus");
+    .select("-password")
+    .populate("role")
+    .populate("department")
+    .populate("accountStatus");
 
   //return resp
-  return res.status(200)
-  .cookie("accessToken", token, {
-  httpOnly: true,
-  secure: false,
-})
-   .cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: false,
-  })
-  .json(
-    new ApiResponse(
-      200,
-      {
-        user: loggedInUser,
-        token,
-      },
-      "User Logged in successfully",
-    ),
-  );
-});
-
-
-export const logoutUser = asyncHandler(async (req , res) =>{
- // refreshToken DB se hatao
-  await User.findByIdAndUpdate(
-    req.user._id , 
-    {
-      $unset : { refreshToken : 1},
-    },
-    { new : true }
-  );
-
-  // cookies clear karo 
-  return res.status(200)
-  .clearCookie("refreshToken" , {
-     httpOnly: true,
+  return res
+    .status(200)
+    .cookie("accessToken", token, {
+      httpOnly: true,
       secure: false,
-  })
-  .clearCookie("accessToken", {
+    })
+    .cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: false,
     })
     .json(
-      new ApiResponse(200 , {} , "logout successful")
+      new ApiResponse(
+        200,
+        {
+          user: loggedInUser,
+          token,
+        },
+        "User Logged in successfully",
+      ),
     );
 });
 
-export const forgotPassword = asyncHandler(async (req , res) =>{
+export const logoutUser = asyncHandler(async (req, res) => {
+  // refreshToken DB se hatao
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $unset: { refreshToken: 1 },
+    },
+    { new: true },
+  );
+
+  // cookies clear karo
+  return res
+    .status(200)
+    .clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: false,
+    })
+    .clearCookie("accessToken", {
+      httpOnly: true,
+      secure: false,
+    })
+    .json(new ApiResponse(200, {}, "logout successful"));
+});
+
+export const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
 
-  if(!user){
-    throw new ApiError(404 , "User not found");
+  if (!user) {
+    throw new ApiError(404, "User not found");
   }
 
   const resetToken = user.generateResetToken();
   await user.save({
-     validateBeforeSave: false 
+    validateBeforeSave: false,
   });
 
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
   const transporter = nodemailer.createTransport({
-    service : "gmail",
-    auth:{
-      user : process.env.EMAIL_USER,
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
   });
 
   await transporter.sendMail({
-    to:user.email,
-    subject:"Password Reset",
-    text : `Click here to reset password : ${resetUrl}`,
+    to: user.email,
+    subject: "Password Reset",
+    text: `Click here to reset password : ${resetUrl}`,
   });
 
-  return res.status(200).json(
-    new ApiResponse( 200 , {} , "Reset link sent to email")
-  )
-})
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Reset link sent to email"));
+});
 
-export const resetPassword = asyncHandler( async (req , res) =>{
- const {token} = req.params;
- const {password ,confirmPassword} = req.body;
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { password, confirmPassword } = req.body;
 
- if (password !== confirmPassword) {
-  throw new ApiError(400, "Passwords do not match");
-}
+  if (password !== confirmPassword) {
+    throw new ApiError(400, "Passwords do not match");
+  }
 
-const passwordRegex =
-/^(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+  const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
 
-if (!passwordRegex.test(password)) {
-  throw new ApiError(
-    400,
-    "Password must be at least 8 characters, include one uppercase letter and one special character"
-  );
-}
+  if (!passwordRegex.test(password)) {
+    throw new ApiError(
+      400,
+      "Password must be at least 8 characters, include one uppercase letter and one special character",
+    );
+  }
 
- const hashedToken = crypto
- .createHash("sha256")
- .update(token)
- .digest("hex");
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
- const user = await User.findOne({
-     resetPasswordToken: hashedToken,
+  const user = await User.findOne({
+    resetPasswordToken: hashedToken,
     resetPasswordExpire: { $gt: Date.now() },
- });
+  });
 
- if(!user){
-  throw new ApiError(400 , "Token invalid or expired");
- };
+  if (!user) {
+    throw new ApiError(400, "Token invalid or expired");
+  }
 
- user.password = password;
- user.resetPasswordToken = undefined;
- user.resetPasswordExpire = undefined;
+  user.password = password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
 
- await user.save();
+  await user.save();
 
- return res.status(200).json(
-  new ApiResponse(200 , {} , "Password reset successful" )
- );
-
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password reset successful"));
 });
