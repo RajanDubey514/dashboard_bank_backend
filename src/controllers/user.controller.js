@@ -145,10 +145,12 @@ export const loginUser = asyncHandler(async (req, res) => {
     .cookie("accessToken", token, {
       httpOnly: true,
       secure: false,
+       sameSite: "none",
     })
     .cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: false,
+       sameSite: "none",
     })
     .json(
       new ApiResponse(
@@ -178,10 +180,12 @@ export const logoutUser = asyncHandler(async (req, res) => {
     .clearCookie("refreshToken", {
       httpOnly: true,
       secure: false,
+       sameSite: "none",
     })
     .clearCookie("accessToken", {
       httpOnly: true,
       secure: false,
+       sameSite: "none",
     })
     .json(new ApiResponse(200, {}, "logout successful"));
 });

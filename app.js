@@ -11,11 +11,32 @@ import allUser from './src/routes/allUser.routes.js'
 
 const app = express();
 
-app.use(
-    cors({
-         origin : process.env.CORS_ORIGIN,
-        credentials : true
-    }));
+// app.use(
+//     cors({
+//         origin : process.env.CORS_ORIGIN,
+//         credentials : true
+//     }));
+   
+ const allowedOrigins = [
+  "http://localhost:3001", // local
+  "https://hilarious-sable-72cc78.netlify.app" // tera frontend
+];
+   app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Postman / mobile apps ke liye
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("CORS not allowed"));
+      }
+    },
+    credentials: true,
+  })
+);
+
 
     app.use(express.json());
     app.use(express.urlencoded({
