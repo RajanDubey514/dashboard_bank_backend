@@ -7,6 +7,7 @@ import { Department } from "../models/department.model.js";
 import { AccountStatus } from "../models/accountStatus.model.js";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
+import { sendEmail } from "../utils/sendEmail.js";
 
 export const registerUser = asyncHandler(async (req, res) => {
   const { fullName, email, phone, username, password, confirmPassword } =
@@ -190,35 +191,78 @@ export const logoutUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "logout successful"));
 });
 
+// export const forgotPassword = asyncHandler(async (req, res) => {
+//   const { email } = req.body;
+//   const user = await User.findOne({ email });
+
+//   if (!user) {
+//     throw new ApiError(404, "User not found");
+//   }
+
+//   const resetToken = user.generateResetToken();
+//   await user.save({
+//     validateBeforeSave: false,
+//   });
+
+//   const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+//   const transporter = nodemailer.createTransport({
+//     service: "gmail",
+//     auth: {
+//       user: process.env.EMAIL_USER,
+//       pass: process.env.EMAIL_PASS,
+//     },
+//   });
+
+//   await transporter.sendMail({
+//     to: user.email,
+//     subject: "Password Reset",
+//     text: `Click here to reset password : ${resetUrl}`,
+//   });
+
+//   return res
+//     .status(200)
+//     .json(new ApiResponse(200, {}, "Reset link sent to email"));
+// });
+
 export const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
-  const user = await User.findOne({ email });
 
+  // 1. Check user
+  const user = await User.findOne({ email });
   if (!user) {
     throw new ApiError(404, "User not found");
   }
 
+  // 2. Generate reset token
   const resetToken = user.generateResetToken();
+
   await user.save({
     validateBeforeSave: false,
   });
 
+  // 3. Create reset URL
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  // 4. Send email using your util
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: "Password Reset",
+      text: `Click here to reset your password: ${resetUrl}`,
+    });
+  } catch (error) {
+    // console.log(error , "hhhhhhh")
+    // rollback token if email fails
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
 
-  await transporter.sendMail({
-    to: user.email,
-    subject: "Password Reset",
-    text: `Click here to reset password : ${resetUrl}`,
-  });
+    await user.save({ validateBeforeSave: false });
 
+    throw new ApiError(500, "Email could not be sent");
+  }
+
+  // 5. Response
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "Reset link sent to email"));
