@@ -10,8 +10,9 @@ import crypto from "crypto";
 import { sendEmail } from "../utils/sendEmail.js";
 
 export const registerUser = asyncHandler(async (req, res) => {
-  const { fullName, email, phone, username, password, confirmPassword } =
-    req.body;
+  const { fullName, email, phone, username, password, 
+    confirmPassword , role , department , accountStatus,
+  } = req.body;
 
   // validation
   if (
@@ -46,7 +47,7 @@ export const registerUser = asyncHandler(async (req, res) => {
   }
 
   const existingUser = await User.findOne({
-    $or: [{ email }, { username }, { phone }],
+    $or: [{ email }, { username }],
   });
 
   if (existingUser) {
@@ -55,14 +56,35 @@ export const registerUser = asyncHandler(async (req, res) => {
 
   const userCount = await User.countDocuments();
 
-  const roleName = userCount === 0 ? "SUPER_ADMIN" : "USER";
+    // ✅ DEFAULT VALUES (only if not provided)
+    let roleData ;
+    let departmentData;
+    let statusData;
 
-  const roleData = await Role.findOne({ name: roleName });
-  const departmentData = await Department.findOne({ name: "IT" });
-  const statusData = await AccountStatus.findOne({ name: "ACTIVE" });
+  // ---------------- ROLE ----------------
+  if (role) {
+    roleData = await Role.findById(role); // frontend se id aayega
+  } else {
+    const roleName = userCount === 0 ? "SUPER_ADMIN" : "USER";
+    roleData = await Role.findOne({ name: roleName });
+  }
+
+  // ---------------- DEPARTMENT ----------------
+  if (department) {
+    departmentData = await Department.findById(department);
+  } else {
+    departmentData = await Department.findOne({ name: "IT" });
+  }
+
+  // ---------------- STATUS ----------------
+  if (accountStatus) {
+    statusData = await AccountStatus.findById(accountStatus);
+  } else {
+    statusData = await AccountStatus.findOne({ name: "ACTIVE" });
+  }
 
   if (!roleData || !departmentData || !statusData) {
-    throw new ApiError(500, "Seed Data missing");
+  throw new ApiError(400, "Invalid role/department/status");
   }
 
   // Create user
@@ -85,16 +107,26 @@ export const registerUser = asyncHandler(async (req, res) => {
   // ❌ remove password from response
   const createdUser = await User.findById(user._id)
     .select("-password")
-    .populate("role")
-    .populate("department")
-    .populate("accountStatus");
+    .populate({ path: "role", select: "name -_id" })
+  .populate({ path: "department", select: "name -_id" })
+  .populate({ path: "accountStatus", select: "name -_id" });
+
+
+
+  const formattedUser = {
+  ...createdUser.toObject(),
+  role: createdUser.role?.name,
+  department: createdUser.department?.name,
+  accountStatus: createdUser.accountStatus?.name,
+};
+
 
   // response
   return res.status(201).json(
     new ApiResponse(
       201,
       {
-        user: createdUser,
+        user: formattedUser,
         token,
       },
       "User registered successfully",

@@ -34,26 +34,15 @@ export const updateDepartment = asyncHandler( async (req , res) =>{
         throw new ApiError(400 , "fields are required");
     }
     
-    const existing = await Department.findById({ name : name.toUpperCase()  ,
-        
-    });
-    if(existing){
-        throw new ApiError(404 , "Department role all ready exists")
+    const existing = await Department.findById(id);
+    if(!existing){
+        throw new ApiError(404 , "Department role does not existing")
     }
 
     if(PROTECTED_DEPARTMENT.includes(existing.name)){
         throw new ApiError(403 , "Department role can not modified");
     }
     
-     const duplicate = await Department.findOne({
-    name: name.toUpperCase(),
-    _id: { $ne: id },
-  });
-
-  if (duplicate) {
-    throw new ApiError(409, "Department already exists");
-  }
-  
      existing.name = name.toUpperCase();
      await existing.save();
      

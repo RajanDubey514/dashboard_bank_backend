@@ -48,8 +48,6 @@ export const updateRoleStatus = asyncHandler( async(req , res) =>{
         throw new ApiError(403 , "This Account Status cannot be Updated");
     }
     
-    
-
     searchRole.name = name.toUpperCase();
     await searchRole.save();
 

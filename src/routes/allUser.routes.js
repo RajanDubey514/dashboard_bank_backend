@@ -1,7 +1,7 @@
 import express from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { authorizedRoles } from "../middlewares/role.middleware.js";
-import { getAllUsers, getMyProfile, toggleUserStatus, updateMyProfile, updateUserAvatar, updateUserCoverImage } from "../controllers/allUsers.controller.js";
+import { getAllUsers, getMyProfileInfo, updateRegisterUser, updateMyProfileInfo, updateUserAvatar, updateUserCoverImage } from "../controllers/allUsers.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
 const router = express.Router()
@@ -15,15 +15,15 @@ router.get(
 
 
 router.patch(
-  "/users/status/:id/",
+  "/users/:id/",
   verifyJWT,
   authorizedRoles("SUPER_ADMIN", "ADMIN"),
-  toggleUserStatus
+  updateRegisterUser
 );
 
 
-router.get("/me", verifyJWT, getMyProfile);
-router.patch("/me", verifyJWT, updateMyProfile);
+router.get("/me", verifyJWT, getMyProfileInfo);
+router.patch("/me", verifyJWT, updateMyProfileInfo);
 
 router.patch(
   "/me/avatar",
