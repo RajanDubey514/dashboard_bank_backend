@@ -2,7 +2,7 @@ import express from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { authorizedRoles } from "../middlewares/role.middleware.js";
 import { getAllUsers, getMyProfileInfo, updateRegisterUser, updateMyProfileInfo, updateUserAvatar, updateUserCoverImage } from "../controllers/allUsers.controller.js";
-import { upload } from "../middlewares/multer.middleware.js";
+import { uploadImage } from "../middlewares/multer.middleware.js";
 
 const router = express.Router()
 
@@ -28,14 +28,14 @@ router.patch("/me", verifyJWT, updateMyProfileInfo);
 router.patch(
   "/me/avatar",
   verifyJWT,
-  upload.single("avatar"),
+  uploadImage.single("avatar"),
   updateUserAvatar
 );
 
 router.patch(
   "/me/cover-image",
   verifyJWT,
-  upload.single("coverImage"),
+  uploadImage.single("coverImage"),
   updateUserCoverImage
 );
 

@@ -351,7 +351,7 @@ export const bulkRegisterStrict = asyncHandler(async (req, res) => {
   const filePath = req.file.path;
 
   try {
-    const workbook = XLSX.readFile(filePath);
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(sheet);
 
