@@ -10,6 +10,7 @@ import crypto from "crypto";
 import { sendEmail } from "../utils/sendEmail.js";
 import XLSX from "xlsx";
 import bcrypt from "bcrypt";
+import fs from "fs";
 
 export const registerUser = asyncHandler(async (req, res) => {
   const { fullName, email, phone, username, password, 
@@ -341,123 +342,114 @@ export const resetPassword = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Password reset successful"));
 });
 
-export const bulkRegisterStrict = asyncHandler(async (req , res) =>{
-  if(!req.file){
-    throw new ApiError(400 , "Excel file is required");
+
+export const bulkRegisterStrict = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new ApiError(400, "Excel file is required");
   }
 
-  const workbook = XLSX.readFile(req.file.path);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const data = XLSX.utils.sheet_to_json(sheet);
+  const filePath = req.file.path;
 
-
+  try {
+    const workbook = XLSX.readFile(filePath);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(sheet);
 
     if (!data.length) {
-    throw new ApiError(400, "Excel file is empty");
-  }
+      throw new ApiError(400, "Excel file is empty");
+    }
 
-   const requiredFields = [
-    "fullName",
-    "email",
-    "phone",
-    "username",
-    "password",
-    "confirmPassword",
-  ];
+    const requiredFields = [
+      "fullName",
+      "email",
+      "phone",
+      "username",
+      "password",
+      "confirmPassword",
+    ];
 
-  const errors = [];
+    const errors = [];
 
-   // 🔍 VALIDATION
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
+    // 🔍 VALIDATION
+    data.forEach((row, i) => {
+      requiredFields.forEach((field) => {
+        if (!row[field]) {
+          errors.push(`Row ${i + 2}: "${field}" is required`);
+        }
+      });
 
-    // 1️⃣ Field check
-    for (let field of requiredFields) {
-      if (!row[field]) {
-        errors.push(`Row ${i + 2}: "${field}" is required`);
+      if (row.password !== row.confirmPassword) {
+        errors.push(`Row ${i + 2}: Passwords do not match`);
       }
-    }
 
-    // 2️⃣ Password match
-    if (row.password !== row.confirmPassword) {
-      errors.push(`Row ${i + 2}: Passwords do not match`);
-    }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (row.email && !emailRegex.test(row.email)) {
+        errors.push(`Row ${i + 2}: Invalid email`);
+      }
 
-    // 3️⃣ Email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (row.email && !emailRegex.test(row.email)) {
-      errors.push(`Row ${i + 2}: Invalid email`);
-    }
+      const passwordRegex =
+        /^(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
 
-    // 4️⃣ Password strength
-    const passwordRegex =
-      /^(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+      if (row.password && !passwordRegex.test(row.password)) {
+        errors.push(`Row ${i + 2}: Weak password`);
+      }
 
-    if (row.password && !passwordRegex.test(row.password)) {
-      errors.push(`Row ${i + 2}: Weak password`);
-    }
-
-    // 5️⃣ Phone validation
-    if (row.phone && !/^[0-9]{10}$/.test(row.phone)) {
-      errors.push(`Row ${i + 2}: Invalid phone`);
-    }
-  }
-
-  // ❌ reject all if any error
-  if (errors.length > 0) {
-    throw new ApiError(400, {
-      message: "Excel validation failed",
-      errors,
+      if (row.phone && !/^[0-9]{10}$/.test(row.phone)) {
+        errors.push(`Row ${i + 2}: Invalid phone`);
+      }
     });
-  }
 
-   // 🔎 Get default values from DB
-  const roleData = await Role.findOne({ name: "USER" });
-  const departmentData = await Department.findOne({ name: "IT" });
-  const statusData = await AccountStatus.findOne({ name: "ACTIVE" });
+    if (errors.length > 0) {
+      throw new ApiError(400, {
+        message: "Excel validation failed",
+        errors,
+      });
+    }
 
-  if (!roleData || !departmentData || !statusData) {
-    throw new ApiError(400, "Default role/department/status missing");
-  }
-  
-  // 🔐 Prepare users
-  const users = await Promise.all(
-    data.map(async (row) => ({
-      fullName: row.fullName,
-      email: row.email,
-      phone: row.phone,
-      username: row.username,
-      password: await bcrypt.hash(row.password, 10),
+    // 🔎 defaults
+    const roleData = await Role.findOne({ name: "USER" });
+    const departmentData = await Department.findOne({ name: "IT" });
+    const statusData = await AccountStatus.findOne({ name: "ACTIVE" });
 
-      role: roleData._id,
-      department: departmentData._id,
-      accountStatus: statusData._id,
-    }))
-  );
-
-  // 🚫 Duplicate check
-  const emails = users.map((u) => u.email);
-  const phones = users.map((u) => u.phone);
-
-  const existingUsers = await User.find({
-    $or: [{ email: { $in: emails } }, { phone: { $in: phones } }],
-  });
-
-  if (existingUsers.length > 0) {
-    throw new ApiError(
-      400,
-      `Duplicate users found: ${existingUsers
-        .map((u) => u.email)
-        .join(", ")}`
+    const users = await Promise.all(
+      data.map(async (row) => ({
+        fullName: row.fullName,
+        email: row.email,
+        phone: row.phone,
+        username: row.username,
+        password: await bcrypt.hash(row.password, 10),
+        role: roleData._id,
+        department: departmentData._id,
+        accountStatus: statusData._id,
+      }))
     );
+
+    const emails = users.map((u) => u.email);
+    const phones = users.map((u) => u.phone);
+
+    const existingUsers = await User.find({
+      $or: [{ email: { $in: emails } }, { phone: { $in: phones } }],
+    });
+
+    if (existingUsers.length > 0) {
+      throw new ApiError(
+        400,
+        `Duplicate users found: ${existingUsers
+          .map((u) => u.email)
+          .join(", ")}`
+      );
+    }
+
+    await User.insertMany(users);
+
+    return res
+      .status(201)
+      .json(new ApiResponse(201, null, "All users uploaded successfully"));
+  } finally {
+    // 🔥 ALWAYS DELETE FILE
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
   }
-
-  // ✅ Insert
-  await User.insertMany(users);
-
-  return res.status(201).json(
-    new ApiResponse(201, null, "All users uploaded successfully")
-  );
-
-})
+});
 
