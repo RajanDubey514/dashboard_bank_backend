@@ -8,6 +8,12 @@ import accountStatus  from "./src/routes/accountStatus.routes.js";
 import roleStatus from "./src/routes/role.routes.js"
 import departmentStatus from "./src/routes/department.routes.js"
 import allUser from './src/routes/allUser.routes.js'
+import unitOfMeter from './src/routes/product_routes/UnitMeter.routes.js'
+import assemblyType from './src/routes/product_routes/AssemblyType.routes.js'
+import ProductType from './src/routes/product_routes/ProductType.routes.js'
+import MainGroup from './src/routes/product_routes/MainGroup.routes.js'
+import SubGroup from './src/routes/product_routes/SubGroup.routes.js'
+import Product from './src/routes/product_routes/Product.routes.js'
 
 const app = express();
 
@@ -49,7 +55,18 @@ app.use(
     app.use("/api/v1/account_status" , accountStatus);
     app.use("/api/v1/role" , roleStatus);
     app.use("/api/v1/department" , departmentStatus);
-    app.use("/api/v1/all" , allUser)
+    app.use("/api/v1/all" , allUser);
+
+
+    //product all routes
+    app.use("/api/v1/product" , Product );
+    app.use("/api/v1/product/uom" , unitOfMeter);
+    app.use("/api/v1/product/assemblyType" , assemblyType);
+    app.use("/api/v1/product/productType" , ProductType);
+    app.use("/api/v1/product/mainGroup" , MainGroup );
+    app.use("/api/v1/product/subGroup" , SubGroup );
+
+
 
 
     app.use(errorHandler);
